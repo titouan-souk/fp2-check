@@ -50,7 +50,7 @@
 <div class=lbl>raw</div>
 <pre id=json></pre>
 <script>
-var ACCESS_KEY="13977f6c-019f-45f1-8dd4-5702ca025603";
+var KEYS=["13977f6c-019f-45f1-8dd4-5702ca025603","__TITOUAN_KEY__"].filter(function(k){return k.indexOf("__")!==0;});
 var fpData=null;
 (function(){
  var EX={hasLiedOs:true,hasLiedBrowser:true,sessionStorage:true,hasLiedLanguages:true,fontsFlash:true,enumerateDevices:true};
@@ -78,24 +78,24 @@ var fpData=null;
 })();
 document.getElementById('send').onclick=function(){
   var st=document.getElementById('status');
-  if(!fpData){st.textContent='⏳ fingerprint pas encore prêt';return;}
+  if(!fpData){st.textContent='\u23f3 fingerprint pas encore pret';return;}
   var model=document.getElementById('model').value;
-  if(!model){st.textContent='⚠️ sélectionne d\'abord le modèle';return;}
-  if(ACCESS_KEY.indexOf('__')===0){st.textContent='⚠️ access key non configurée';return;}
-  var lines=[];
-  lines.push('Modèle: '+model);
-  lines.push('Vinted FP2 hash: '+fpData.hash);
-  lines.push('UA: '+fpData.ua);
-  lines.push(''); lines.push('Sub-hashes:');
+  if(!model){st.textContent='\u26a0\ufe0f selectionne d\'abord le modele';return;}
+  if(!KEYS.length){st.textContent='\u26a0\ufe0f aucune cle configuree';return;}
+  var lines=['Modele: '+model,'Vinted FP2 hash: '+fpData.hash,'UA: '+fpData.ua,'','Sub-hashes:'];
   Object.keys(fpData.components).forEach(function(k){lines.push(k+' = '+fpData.components[k].sub);});
-  lines.push(''); lines.push('Valeurs clés:');
+  lines.push('','Valeurs cles:');
   ['screenResolution','availableScreenResolution','pixelRatio','language','timezone','webglVendorAndRenderer','audio'].forEach(function(k){if(fpData.components[k])lines.push(k+' = '+fpData.components[k].value);});
-  var btn=this; btn.disabled=true; st.textContent='⏳ envoi…';
-  fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
-    body:JSON.stringify({access_key:ACCESS_KEY,subject:'iPhone FP — '+model+' — '+fpData.hash.slice(0,8),from_name:'FP2 Check',ccemail:'titouan@souk.to',message:lines.join('\n')})})
-  .then(function(r){return r.json();})
-  .then(function(d){st.textContent=d.success?'✅ envoyé à quentin & titouan':'❌ '+(d.message||'erreur');btn.disabled=false;})
-  .catch(function(e){st.textContent='❌ '+e;btn.disabled=false;});
+  var body=lines.join('\n');
+  var btn=this; btn.disabled=true; st.textContent='\u23f3 envoi...';
+  Promise.all(KEYS.map(function(k){
+    return fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
+      body:JSON.stringify({access_key:k,subject:'iPhone FP \u2014 '+model+' \u2014 '+fpData.hash.slice(0,8),from_name:'FP2 Check',message:body})}).then(function(r){return r.json();});
+  })).then(function(res){
+    var ok=res.every(function(d){return d.success;});
+    st.textContent=ok?('\u2705 envoye ('+KEYS.length+' destinataire'+(KEYS.length>1?'s':'')+')'):('\u274c '+res.filter(function(d){return !d.success;}).map(function(d){return d.message;}).join(' | '));
+    btn.disabled=false;
+  }).catch(function(e){st.textContent='\u274c '+e;btn.disabled=false;});
 };
 </script>
 </body></html>
