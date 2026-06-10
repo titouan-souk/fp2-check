@@ -24,21 +24,41 @@
 </head><body>
 <h1>Vinted FingerprintJS2 — exact recipe</h1>
 <div id=meta>computing…</div>
-<div class=lbl>Vinted hash (compare this between two phones)</div>
+
+<div class=lbl>Modèle iPhone</div>
+<select id=model>
+<option value="">— sélectionne le modèle —</option>
+<option>iPhone SE (2e gen)</option><option>iPhone SE (3e gen)</option>
+<option>iPhone X</option><option>iPhone XR</option><option>iPhone XS</option><option>iPhone XS Max</option>
+<option>iPhone 11</option><option>iPhone 11 Pro</option><option>iPhone 11 Pro Max</option>
+<option>iPhone 12 mini</option><option>iPhone 12</option><option>iPhone 12 Pro</option><option>iPhone 12 Pro Max</option>
+<option>iPhone 13 mini</option><option>iPhone 13</option><option>iPhone 13 Pro</option><option>iPhone 13 Pro Max</option>
+<option>iPhone 14</option><option>iPhone 14 Plus</option><option>iPhone 14 Pro</option><option>iPhone 14 Pro Max</option>
+<option>iPhone 15</option><option>iPhone 15 Plus</option><option>iPhone 15 Pro</option><option>iPhone 15 Pro Max</option>
+<option>iPhone 16</option><option>iPhone 16 Plus</option><option>iPhone 16 Pro</option><option>iPhone 16 Pro Max</option>
+</select>
+
+<div class=lbl>Vinted hash</div>
 <div id=hash>…</div>
-<div class=lbl>27 components — compare each sub-hash to locate any difference</div>
+
+<button id=send>📧 Envoyer à quentin & titouan</button>
+<div id=status></div>
+
+<div class=lbl>27 components</div>
 <table id=tbl><thead><tr><th>#</th><th>component</th><th>sub-hash</th><th>value</th></tr></thead><tbody></tbody></table>
 <button id=copy>Copy all as JSON</button>
 <div class=lbl>raw</div>
 <pre id=json></pre>
 <script>
+var ACCESS_KEY="13977f6c-019f-45f1-8dd4-5702ca025603";
+var fpData=null;
 (function(){
  var EX={hasLiedOs:true,hasLiedBrowser:true,sessionStorage:true,hasLiedLanguages:true,fontsFlash:true,enumerateDevices:true};
  Fingerprint2.get({excludes:EX},function(comps){
    var values=comps.map(function(c){return c.value;});
    var hash=Fingerprint2.x64hash128(values.join(''),0);
    document.getElementById('hash').textContent=hash;
-   document.getElementById('meta').textContent='FP2 v'+Fingerprint2.VERSION+' · seed 0 · '+comps.length+' components · '+navigator.userAgent;
+   document.getElementById('meta').textContent='FP2 v'+Fingerprint2.VERSION+' · seed 0 · '+comps.length+' components';
    var tb=document.querySelector('#tbl tbody');
    var out={hash:hash,ua:navigator.userAgent,components:{}};
    comps.forEach(function(c,i){
@@ -48,14 +68,34 @@
      var prev=raw.length>90?raw.slice(0,90)+'…['+raw.length+']':raw;
      var tr=document.createElement('tr');
      tr.innerHTML='<td>'+(i+1)+'</td><td class=k></td><td class=sub></td><td class=val></td>';
-     tr.children[1].textContent=c.key;
-     tr.children[2].textContent=sub;
-     tr.children[3].textContent=prev;
+     tr.children[1].textContent=c.key; tr.children[2].textContent=sub; tr.children[3].textContent=prev;
      tb.appendChild(tr);
    });
    document.getElementById('json').textContent=JSON.stringify(out,null,1);
+   fpData=out;
    document.getElementById('copy').onclick=function(){var t=JSON.stringify(out);if(navigator.clipboard){navigator.clipboard.writeText(t);this.textContent='Copied ✓';}};
  });
 })();
+document.getElementById('send').onclick=function(){
+  var st=document.getElementById('status');
+  if(!fpData){st.textContent='⏳ fingerprint pas encore prêt';return;}
+  var model=document.getElementById('model').value;
+  if(!model){st.textContent='⚠️ sélectionne d\'abord le modèle';return;}
+  if(ACCESS_KEY.indexOf('__')===0){st.textContent='⚠️ access key non configurée';return;}
+  var lines=[];
+  lines.push('Modèle: '+model);
+  lines.push('Vinted FP2 hash: '+fpData.hash);
+  lines.push('UA: '+fpData.ua);
+  lines.push(''); lines.push('Sub-hashes:');
+  Object.keys(fpData.components).forEach(function(k){lines.push(k+' = '+fpData.components[k].sub);});
+  lines.push(''); lines.push('Valeurs clés:');
+  ['screenResolution','availableScreenResolution','pixelRatio','language','timezone','webglVendorAndRenderer','audio'].forEach(function(k){if(fpData.components[k])lines.push(k+' = '+fpData.components[k].value);});
+  var btn=this; btn.disabled=true; st.textContent='⏳ envoi…';
+  fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
+    body:JSON.stringify({access_key:ACCESS_KEY,subject:'iPhone FP — '+model+' — '+fpData.hash.slice(0,8),from_name:'FP2 Check',ccemail:'titouan@souk.to',message:lines.join('\n')})})
+  .then(function(r){return r.json();})
+  .then(function(d){st.textContent=d.success?'✅ envoyé à quentin & titouan':'❌ '+(d.message||'erreur');btn.disabled=false;})
+  .catch(function(e){st.textContent='❌ '+e;btn.disabled=false;});
+};
 </script>
 </body></html>
